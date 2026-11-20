@@ -1,0 +1,15 @@
+{
+  "name": "adong-portfolio",
+  "version": "1.0.0",
+  "description": "阿阿冬 • 3D 动力学星尘个人视觉主页",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["webgl", "particles", "portfolio"],
+  "author": "阿阿冬",
+  "license": "MIT"
+}

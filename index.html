@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阿阿冬 // 星尘凝聚与虚空引力</title>
+  <style>
+    :root {
+      --bg: #030306;
+      --text-white: #f8fafc;
+      --text-muted: #64748b;
+      --font-serif: "Cinzel", "Noto Serif SC", Georgia, "Source Han Serif CN", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      cursor: none;
+    }
+
+    /* WebGL Surface */
+    #canvas-webgl {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      z-index: 1;
+    }
+
+    /* Deep Space Ambient Glow & Grain */
+    .bg-nebula {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      background: radial-gradient(circle at 50% 50%, rgba(30, 27, 75, 0.3) 0%, rgba(3, 3, 6, 0.9) 75%, #030306 100%);
+    }
+
+    .film-grain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Pure Cinematic HUD */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 44px 56px;
+      pointer-events: none;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Top Nav */
+    .nav-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .author-signature {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--text-white);
+      font-weight: 500;
+    }
+    .author-dot {
+      width: 7px;
+      height: 7px;
+      background: #38bdf8;
+      border-radius: 50%;
+      box-shadow: 0 0 14px #38bdf8;
+      animation: pulse 2.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+
+    .author-name-tag {
+      font-size: 13px;
+      letter-spacing: 4px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .audio-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      color: var(--text-muted);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .audio-btn:hover, .audio-btn.active {
+      color: #fff;
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(56, 189, 248, 0.1);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    }
+    .audio-icon-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .audio-btn.active .audio-icon-dot {
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+
+    /* Center Subtitle */
+    .hero-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .hero-caption {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 7px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+      padding: 5px 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-sub {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 5px;
+      color: rgba(255, 255, 255, 0.55);
+      text-transform: uppercase;
+      margin-top: 220px;
+    }
+
+    /* Bottom Info Bar */
+    .nav-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 20px;
+    }
+
+    .status-stats {
+      display: flex;
+      gap: 28px;
+    }
+    .status-stats span {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .tip-text {
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 2px;
+    }
+
+    /* Celestial Gravity Cursor */
+    .cursor-core {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      background: #ffffff;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 16px #38bdf8;
+    }
+
+    .cursor-grav-ring {
+      position: fixed;
+      width: 52px;
+      height: 52px;
+      border: 1px dashed rgba(56, 189, 248, 0.45);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 99;
+      transform: translate(-50%, -50%);
+      transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                  height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.35s,
+                  background 0.35s;
+      animation: rotateRing 14s linear infinite;
+    }
+    @keyframes rotateRing {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    .cursor-grav-ring.hovering {
+      width: 86px;
+      height: 86px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      background: rgba(56, 189, 248, 0.04);
+    }
+
+    @media (max-width: 768px) {
+      .ui-layer { padding: 24px; }
+      .tip-text { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL 50,000 Particle Kinetic Engine -->
+  <canvas id="canvas-webgl"></canvas>
+
+  <!-- Ambient Space Depth -->
+  <div class="bg-nebula"></div>
+  <div class="film-grain"></div>
+
+  <!-- Custom Cursor -->
+  <div class="cursor-core" id="cursor-core"></div>
+  <div class="cursor-grav-ring" id="cursor-ring"></div>
+
+  <!-- Minimal HUD Layer -->
+  <div class="ui-layer">
+    <!-- Top Nav -->
+    <header class="nav-top interactive">
+      <div class="author-signature">
+        <div class="author-dot"></div>
+        <span class="author-name-tag">阿阿冬 // A DONG</span>
+      </div>
+      <div>PARTICLE SINGULARITY ENGINE</div>
+      <button class="audio-btn interactive" id="audio-btn">
+        <div class="audio-icon-dot"></div>
+        <span id="audio-text">SOUND: OFF</span>
+      </button>
+    </header>
+
+    <!-- Center Hero -->
+    <div class="hero-center">
+      <div class="hero-caption">STARDUST CONSTELLATION</div>
+      <p class="hero-sub">50,000 KINETIC STARS // GRAVITATIONAL DYNAMICS</p>
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <footer class="nav-bottom">
+      <div class="status-stats">
+        <div>CORE: <span>阿阿冬 (A DONG)</span></div>
+        <div>PARTICLES: <span>50,000</span></div>
+        <div>ENGINE: <span>WEBGL 60FPS</span></div>
+      </div>
+      <div class="tip-text">移动鼠标扰动引力场 • 点击释放高能重力冲击波</div>
+    </footer>
+  </div>
+
+  <script>
+    // --- 1. Web Audio Resonant Atmosphere Synthesis ---
+    let soundOn = false;
+    let audioCtx = null;
+    let droneGain = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Deep warm ethereal ambient drone
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        droneGain = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(65.41, audioCtx.currentTime); // C2
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(98.00, audioCtx.currentTime); // G2
+
+        droneGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        osc1.connect(droneGain);
+        osc2.connect(droneGain);
+        droneGain.connect(audioCtx.destination);
+        osc1.start();
+        osc2.start();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playCelestialChime(freq = 528) {
+      if (!soundOn || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + 0.35);
+
+        gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.8);
+      } catch (e) {}
+    }
+
+    const audioBtn = document.getElementById('audio-btn');
+    audioBtn.addEventListener('click', () => {
+      soundOn = !soundOn;
+      if (soundOn) {
+        initAudio();
+        audioBtn.classList.add('active');
+        document.getElementById('audio-text').textContent = 'SOUND: ON';
+        droneGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 1.5);
+        playCelestialChime(528);
+      } else {
+        audioBtn.classList.remove('active');
+        document.getElementById('audio-text').textContent = 'SOUND: OFF';
+        if (droneGain) droneGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+      }
+    });
+
+    // --- 2. Custom Gravitational Cursor ---
+    const core = document.getElementById('cursor-core');
+    const ring = document.getElementById('cursor-ring');
+    let mouse = {
+      x: window.innerWidth * 0.5,
+      y: window.innerHeight * 0.5,
+      targetX: window.innerWidth * 0.5,
+      targetY: window.innerHeight * 0.5
+    };
+    let ringPos = { x: mouse.x, y: mouse.y };
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.targetX = e.clientX;
+      mouse.targetY = e.clientY;
+      core.style.left = e.clientX + 'px';
+      core.style.top = e.clientY + 'px';
+    });
+
+    document.querySelectorAll('.interactive').forEach(el => {
+      el.addEventListener('mouseenter', () => ring.classList.add('hovering'));
+      el.addEventListener('mouseleave', () => ring.classList.remove('hovering'));
+    });
+
+    // --- 3. WebGL GPU Particle Engine ---
+    const canvas = document.getElementById('canvas-webgl');
+    const gl = canvas.getContext('webgl');
+
+    if (!gl) {
+      alert('WebGL not supported');
+    }
+
+    const PARTICLE_COUNT = 50000;
+
+    // High-resolution sampling of "阿阿冬"
+    function sampleTextPoints(text, font, scale = 1.0, count = PARTICLE_COUNT) {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = 1800;
+      offCanvas.height = 700;
+      const offCtx = offCanvas.getContext('2d');
+      offCtx.fillStyle = '#000';
+      offCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+      offCtx.fillStyle = '#fff';
+      offCtx.font = font;
+      offCtx.textAlign = 'center';
+      offCtx.textBaseline = 'middle';
+      offCtx.fillText(text, offCanvas.width / 2, offCanvas.height / 2);
+
+      const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+      const pixels = imgData.data;
+      const rawPoints = [];
+
+      for (let y = 0; y < offCanvas.height; y += 4) {
+        for (let x = 0; x < offCanvas.width; x += 4) {
+          const idx = (y * offCanvas.width + x) * 4;
+          if (pixels[idx] > 110) {
+            rawPoints.push([
+              ((x - offCanvas.width / 2) / 330) * scale,
+              (- (y - offCanvas.height / 2) / 330) * scale,
+              (Math.random() - 0.5) * 0.45 * scale
+            ]);
+          }
+        }
+      }
+
+      const points = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const p = rawPoints[i % rawPoints.length];
+        points[i * 3 + 0] = p[0] + (Math.random() - 0.5) * 0.06;
+        points[i * 3 + 1] = p[1] + (Math.random() - 0.5) * 0.06;
+        points[i * 3 + 2] = p[2] + (Math.random() - 0.5) * 0.25;
+      }
+      return points;
+    }
+
+    // Positions for "阿阿冬"
+    const posChinese = sampleTextPoints('阿阿冬', 'bold 280px "Noto Serif SC", "Source Han Serif CN", Georgia, serif', 1.25, PARTICLE_COUNT);
+
+    // Random Phase & Sparkle Buffer
+    const randomBufferData = new Float32Array(PARTICLE_COUNT * 3);
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      randomBufferData[i * 3 + 0] = Math.random(); // Size seed
+      randomBufferData[i * 3 + 1] = Math.random() * Math.PI * 2; // Sparkle phase
+      randomBufferData[i * 3 + 2] = Math.random() > 0.4 ? 1.0 : (Math.random() > 0.5 ? 2.0 : 3.0); // Palette
+    }
+
+    // Vertex Shader
+    const vsSource = `
+      attribute vec3 a_pos;
+      attribute vec3 a_random;
+
+      uniform float u_time;
+      uniform vec2 u_mouse;
+      uniform vec2 u_resolution;
+      uniform float u_burst_intensity;
+
+      varying vec3 v_random;
+      varying float v_depth;
+
+      mat2 rot(float a) {
+        float c = cos(a), s = sin(a);
+        return mat2(c, -s, s, c);
+      }
+
+      void main() {
+        vec3 p = a_pos;
+
+        // Cosmic Gentle Wave Drift
+        float t = u_time * 0.8;
+        p.x += sin(p.y * 3.0 + t + a_random.y) * 0.035;
+        p.y += cos(p.x * 3.0 + t + a_random.y) * 0.035;
+        p.z += sin(p.z * 3.0 + t * 0.7) * 0.045;
+
+        // Mouse 3D Inertial Rotation & Tilt
+        vec2 m = (u_mouse / u_resolution - 0.5) * 2.0;
+        p.xz *= rot(m.x * 0.9 + u_time * 0.06);
+        p.yz *= rot(-m.y * 0.75);
+
+        // Click Gravitational Shockwave Burst
+        if (u_burst_intensity > 0.001) {
+          float dist = length(p);
+          vec3 dir = normalize(p + vec3(0.001));
+          p += dir * sin(dist * 6.0 - u_time * 12.0) * u_burst_intensity * 0.85;
+        }
+
+        // Perspective Projection
+        float fov = 3.2;
+        vec3 cameraPos = vec3(0.0, 0.0, 3.8);
+
+        // Mouse Gravitational Repulsion in screen-space
+        vec2 projXY = p.xy * (fov / (p.z + 3.8));
+        vec2 mouseNorm = m * vec2(u_resolution.x / u_resolution.y, 1.0);
+        float mouseDist = length(projXY - mouseNorm * 0.85);
+        if (mouseDist < 0.65) {
+          float pushForce = (0.65 - mouseDist) * 0.45;
+          p.xy += normalize(projXY - mouseNorm * 0.85 + vec2(0.001)) * pushForce;
+        }
+
+        gl_Position = vec4(p.x * (fov / (p.z + 3.8)), p.y * (fov / (p.z + 3.8)) * (u_resolution.x / u_resolution.y), p.z * 0.1, 1.0);
+
+        // Point Size Attenuation
+        float size = (a_random.x * 2.2 + 1.3) * (2.8 / (p.z + 3.8));
+        gl_PointSize = max(1.2, size * (u_resolution.y / 800.0));
+
+        v_random = a_random;
+        v_depth = p.z;
+      }
+    `;
+
+    // Fragment Shader
+    const fsSource = `
+      precision highp float;
+      uniform float u_time;
+      varying vec3 v_random;
+      varying float v_depth;
+
+      void main() {
+        // Soft Circular Star Particle
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        float dist = length(coord);
+        if (dist > 0.5) discard;
+
+        float alpha = 1.0 - smoothstep(0.0, 0.5, dist);
+        alpha = pow(alpha, 1.6);
+
+        // Twinkle Sparkle
+        float sparkle = 0.7 + 0.3 * sin(u_time * 4.0 + v_random.y);
+
+        // High-end Celestial Palette (Silver, Electric Sky Cyan, Warm Champagne)
+        vec3 col;
+        if (v_random.z > 2.5) {
+          col = vec3(0.22, 0.74, 0.97); // Celestial Sky Blue
+        } else if (v_random.z > 1.5) {
+          col = vec3(0.96, 0.98, 1.0);  // Pure Star Silver
+        } else {
+          col = vec3(0.99, 0.84, 0.68); // Warm Champagne Glow
+        }
+
+        // Depth cueing
+        float depthFog = clamp((v_depth + 2.0) / 4.0, 0.4, 1.0);
+        gl_FragColor = vec4(col * sparkle, alpha * depthFog * 0.92);
+      }
+    `;
+
+    function createShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+    const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    function createAttribBuffer(data, attribName, size = 3) {
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(program, attribName);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+      return buf;
+    }
+
+    createAttribBuffer(posChinese, 'a_pos');
+    createAttribBuffer(randomBufferData, 'a_random');
+
+    // Uniforms
+    const uTime = gl.getUniformLocation(program, 'u_time');
+    const uMouse = gl.getUniformLocation(program, 'u_mouse');
+    const uResolution = gl.getUniformLocation(program, 'u_resolution');
+    const uBurst = gl.getUniformLocation(program, 'u_burst_intensity');
+
+    let burstIntensity = 0.0;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(uResolution, canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Enable Additive Blending for Glow
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+    // Click Gravitational Shockwave
+    window.addEventListener('mousedown', () => {
+      burstIntensity = 1.6;
+      playCelestialChime(Math.random() * 200 + 480);
+    });
+
+    // Main Render Loop
+    let startTime = performance.now();
+
+    function render() {
+      const elapsed = (performance.now() - startTime) * 0.001;
+
+      // Mouse smoothing
+      mouse.x += (mouse.targetX - mouse.x) * 0.07;
+      mouse.y += (mouse.targetY - mouse.y) * 0.07;
+
+      ringPos.x += (mouse.x - ringPos.x) * 0.16;
+      ringPos.y += (mouse.y - ringPos.y) * 0.16;
+      ring.style.left = ringPos.x + 'px';
+      ring.style.top = ringPos.y + 'px';
+
+      burstIntensity *= 0.94;
+
+      gl.clearColor(0.012, 0.012, 0.024, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      gl.uniform1f(uTime, elapsed);
+      gl.uniform2f(uMouse, mouse.x * (canvas.width / window.innerWidth), (window.innerHeight - mouse.y) * (canvas.height / window.innerHeight));
+      gl.uniform1f(uBurst, burstIntensity);
+
+      gl.drawArrays(gl.POINTS, 0, PARTICLE_COUNT);
+
+      requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
